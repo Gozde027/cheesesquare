@@ -23,6 +23,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,34 +32,109 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.support.android.designlibdemo.launcher.CheeseApiLauncher;
+import com.support.android.designlibdemo.launcher.ErrorHandler;
+import com.support.android.designlibdemo.launcher.SuccessHandler;
 
-import java.io.IOException;
 import java.util.List;
 
+import static android.view.View.GONE;
+
 public class CheeseListFragment extends Fragment {
+
+    private String LOG = "CheeseListFragment";
+
+    private RecyclerView rv;
+    private View noDataView;
+
+    private CheeseData cheeseData;
+
+    private void log(String message){
+        Log.i(LOG,message);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if(savedInstanceState != null){
+            cheeseData = (CheeseData) savedInstanceState.getSerializable("OUTPUT");
+        }
+        log("onCreate");
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable("OUTPUT", cheeseData);
+        log("onSaveInstanceState");
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        log("onActivityCreated");
+    }
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        RecyclerView rv = (RecyclerView) inflater.inflate(
-                R.layout.fragment_cheese_list, container, false);
-        setupRecyclerView(rv);
-        return rv;
+        return inflater.inflate(R.layout.fragment_cheese_list, container, false);
     }
 
-    private void setupRecyclerView(RecyclerView recyclerView) {
-        recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        setupRecyclerView(view);
+    }
 
-        try {
-            List<Cheese> cheeses = CheeseApi.listCheeses(30);
-            recyclerView.setAdapter(new SimpleStringRecyclerViewAdapter(getActivity(), cheeses));
-        } catch (IOException exception) {
-            // Ignore.
+    private void setupRecyclerView(final View view) {
+        rv = view.findViewById(R.id.recyclerview);
+        rv.setLayoutManager(new LinearLayoutManager(rv.getContext()));
+
+        noDataView = view.findViewById(R.id.noData);
+
+        decideView();
+    }
+
+    private void decideView(){
+
+        if(cheeseData == null){
+            rv.setAdapter(new ProgressViewAdapter());
+            callApi();
+        }else if(cheeseData.isHasCheese()){
+            fillRecyclerViewWithCheese();
+        }else{
+            showNoData();
         }
     }
 
-    public static class SimpleStringRecyclerViewAdapter
-            extends RecyclerView.Adapter<SimpleStringRecyclerViewAdapter.ViewHolder> {
+    private void callApi(){
+        CheeseApiLauncher launcher = new CheeseApiLauncher(new SuccessHandler() {
+            @Override
+            public void onSuccess(CheeseData cheeseData) {
+                CheeseListFragment.this.cheeseData = cheeseData;
+                fillRecyclerViewWithCheese();
+            }
+        }, new ErrorHandler() {
+            @Override
+            public void onError() {
+                CheeseListFragment.this.cheeseData = new CheeseData();
+                showNoData();
+            }
+        });
+        launcher.launch();
+    }
+
+    private void fillRecyclerViewWithCheese(){
+        rv.setAdapter(new SimpleStringRecyclerViewAdapter(getActivity(), cheeseData.cheeseList));
+    }
+
+    private void showNoData(){
+        rv.setVisibility(GONE);
+        noDataView.setVisibility(View.VISIBLE);
+    }
+
+    public static class SimpleStringRecyclerViewAdapter extends RecyclerView.Adapter<SimpleStringRecyclerViewAdapter.ViewHolder> {
 
         private final TypedValue mTypedValue = new TypedValue();
         private int mBackground;
