@@ -33,16 +33,10 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * TODO
- */
 public class MainActivity extends AppCompatActivity {
 
     private DrawerLayout mDrawerLayout;
@@ -106,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
         adapter.addFragment(new CheeseListFragment(), "Category 2");
         adapter.addFragment(new CheeseListFragment(), "Category 3");
         viewPager.setAdapter(adapter);
+        viewPager.setOffscreenPageLimit(2);
     }
 
     private void setupDrawerContent(NavigationView navigationView) {
